@@ -1,5 +1,5 @@
 import redis
-from config import settings
+from .config import settings
 
 
 redis_client = redis.Redis(
@@ -8,4 +8,8 @@ redis_client = redis.Redis(
     db=0, 
     decode_responses=True
 )
+
+
+
+    
 

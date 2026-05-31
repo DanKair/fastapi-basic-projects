@@ -1,6 +1,3 @@
-from os import access
-import token
-
 from fastapi import APIRouter, Cookie, Depends, Response, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
@@ -10,7 +7,7 @@ from core.config import settings
 from core.database import get_db
 from models.users import User
 from schemas.auth import TokenPairsResponse, UserRegister
-from services.auth import create_access_token, create_refresh_token, is_refresh_token_expired, revoke_refresh_token, get_refresh_token_record
+from services.auth import add_token_to_blacklist, create_access_token, create_refresh_token, get_current_user, is_refresh_token_expired, revoke_refresh_token, get_refresh_token_record, oauth2_scheme
 from services.users import authenticate_user, get_password_hash, get_user_by_username_or_email
 
 # Centralized cookie configuration helper
@@ -21,8 +18,7 @@ def set_refresh_cookie(response: Response, token: str):
         httponly=True, # Prevents XSS attacks (JS cannot read it)
         max_age=settings.REFRESH_TOKEN_AGE_SECONDS,
         samesite="lax",
-        secure=settings.HTTPS_ENABLED,  # Ensures the cookie is only transmitted over HTTPS
-        path="/auth"  # Restricts cookie scope to auth endpoints for security
+        secure=settings.HTTPS_ENABLED # Ensures the cookie is only transmitted over HTTPS
     )
 
 
@@ -131,6 +127,7 @@ def refresh_session(
 ):
     """
     Refresh Flow:
+    0. Executes only when access token expires or becomes revoked
     1. Verify cookie presence.
     2. Hash incoming token to match database storage formatting.
     3. Query the DB by hash to instantly verify existence and find the user.
@@ -172,12 +169,15 @@ def refresh_session(
     # Revokation Scenario 2: Token rotation (Creating new token and removing existing ones)
     revoke_refresh_token(refresh_token, db)
 
-    # Step 5: Issue a fresh short-lived access token
-    new_access_token = create_access_token({"sub": user.username})
+    # Create refresh token and extract its record from db for jti use
     new_refresh_token = create_refresh_token(user_id=user.id, db=db)
     
     # Set the new refresh token in httponly cookie
-    set_refresh_cookie(response, token=refresh_token)
+    set_refresh_cookie(response, token=new_refresh_token)
+
+    new_record = get_refresh_token_record(new_refresh_token, db)
+    # Step 5: Issue a fresh short-lived access token and set jti field to newly created access token
+    new_access_token = create_access_token({"sub": user.username, "jti": str(new_record.jti)})
 
     # Return the payload back to the client
     return TokenPairsResponse(
@@ -190,8 +190,9 @@ def refresh_session(
 def logout(
     db: Annotated[Session, Depends(get_db)],
     response: Response,
-    refresh_token: Annotated[str | None, Cookie()] = None,
-):
+    # access_token: Annotated[str, Depends(oauth2_scheme)], # Comment this if testing
+    refresh_token: Annotated[str | None, Cookie()] = None
+) -> dict:
     """
     Logout and revoke refresh token.
     
@@ -200,6 +201,10 @@ def logout(
     - Deletes the token record from database
     - Clears the refresh token cookie
     """
+
+    # Add access token to blacklist
+    #add_token_to_blacklist(access_token)
+
     if not refresh_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -210,11 +215,9 @@ def logout(
     try:
         revoke_refresh_token(token=refresh_token, db=db)
     except HTTPException as e:
-        # Token not found in DB, but still clear the cookie
-        response.delete_cookie("refresh_token", path="/")
+        response.delete_cookie("refresh_token")
         raise e
-    finally:
-         # If token doesn't exist in DB, still clear the client cookie to ensure logout 
-        response.delete_cookie("refresh_token", path="/")
+    # Remove the token from cookies anyways
+    response.delete_cookie("refresh_token")
     
     return {"detail": "Successfully logged out. Refresh token revoked."}

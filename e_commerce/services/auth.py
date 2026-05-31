@@ -6,13 +6,14 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
 
-from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from core.config import settings
 from core.database import get_db
+from core.redis import redis_client
 from exceptions.auth import credentials_exception
 from models.tokens import RefreshToken
 from services.users import get_user_by_username
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -72,10 +73,11 @@ def get_current_jti(token: str = Depends(oauth2_scheme)) -> str:
         )
 
 
-def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session):
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Annotated[Session, Depends(get_db)]):
     try:
-        # Decode the token
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        # Validate the token signature and blacklist status
+        #payload = verify_token_not_blacklisted(token)
+        payload = decode_access_token(token)
         username: str = payload["sub"]
         if not username:
             raise credentials_exception
@@ -107,16 +109,13 @@ def get_refresh_token_record(token: str, db: Session) -> RefreshToken:
     # Fetch using hash lookup first
     record = db.query(RefreshToken).filter(RefreshToken.token_hash == target_hash).first()
     
-    if not record or not compare_digest(record.token_hash, target_hash):
+    if not record:
         raise credentials_exception
     return record
 
 
 def is_refresh_token_expired(token: str, db: Session):
     session_record = get_refresh_token_record(token, db)
-
-    if not session_record:
-        raise ValidationError("Token doesn't exist")
 
     return True if datetime.now(timezone.utc) > session_record.expires_at.replace(tzinfo=timezone.utc) else False
 
@@ -160,10 +159,62 @@ def create_refresh_token(user_id: int, db: Session):
     
 
 
-def refresh_session(refresh_token: str):
+def add_token_to_blacklist(token: str) -> None:
     """
-    1. Validates refresh token against db (Check if passed value has matching hash)
-    2. Check expiration date of the passed token
-    3. Create new access token and return it
+    Extracts the JTI and expiration from an active token 
+    and adds it to the Redis blacklist with a dynamic TTL.
     """
-    pass
+    try:
+        # Decode without verification checks if you are blacklisting an abused token
+        # or use standard decode if blacklisting during a normal logout.
+        payload = decode_access_token(token)
+        
+        jti = payload.get("jti")
+        exp = payload.get("exp")
+        
+        if not jti or not exp:
+            return  # Nothing to blacklist if claims are missing
+
+        # Calculate remaining lifetime in seconds
+        current_time = int(datetime.now(timezone.utc).timestamp())
+        ttl = exp - current_time
+
+        # Only blacklist if the token has time remaining
+        if ttl > 0:
+            redis_key = f"token:blacklist:{jti}"
+            # setex sets the key, expiration time (TTL), and value simultaneously
+            redis_client.setex(name=redis_key, time=ttl, value="1")
+
+    except jwt.PyJWTError:
+        # If the token is completely mangled or unparseable, ignore it
+        pass
+
+
+def verify_token_not_blacklisted(token: Annotated[str, Depends(oauth2_scheme)]) -> dict:
+    """
+    FastAPI Dependency Guard. 
+    Decodes the token and instantly checks Redis to ensure it hasn't been revoked.
+    """
+    try:
+        # 1. Standard structural & signature validation
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        
+        jti = payload.get("jti")
+        if not jti:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token missing tracking identifier"
+            )
+
+        # 2. Redis Blocklist Verification (O(1) lookups)
+        redis_key = f"token:blacklist:{jti}"
+        if redis_client.exists(redis_key):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked or invalidated"
+            )
+            
+        return payload  # Return payload so sub-dependencies can use it
+
+    except jwt.PyJWTError:
+        raise credentials_exception

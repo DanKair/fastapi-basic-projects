@@ -65,6 +65,9 @@ db.sqlite3-journal
 instance/
 .webassets-cache
 
+# FastAPI stuff
+*.db
+
 # Scrapy stuff:
 .scrapy
 
@@ -200,6 +203,10 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# AI Agentsfiles
+.codex
+.gemini
 
 # Marimo
 marimo/_static/

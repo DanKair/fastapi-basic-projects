@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from core.database import get_db
 from models.users import User
 from schemas.users import UserResponse, UserUpdate
-from services.auth import  get_current_user
+from services.auth import  get_current_user, verify_token_not_blacklisted
 from services.users import (
     get_password_hash,
     verify_password
@@ -17,7 +17,8 @@ from services.users import (
 router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("", response_model=List[UserResponse], status_code=status.HTTP_200_OK)
-def get_all_users(db: Annotated[Session, Depends(get_db)]):
+def get_all_users(db: Annotated[Session, Depends(get_db)], token_payload: Annotated[dict, Depends(verify_token_not_blacklisted)]):
+    # This block executes ONLY if the signature is valid AND not blacklisted
     result = db.execute(select(User))
     users = result.scalars().all()
     return users
