@@ -14,7 +14,7 @@ from services.users import authenticate_user, get_password_hash, get_user_by_use
 def set_refresh_cookie(response: Response, token: str):
     response.set_cookie(
         key="refresh_token",
-        value=token,
+        value=token,    
         httponly=True, # Prevents XSS attacks (JS cannot read it)
         max_age=settings.REFRESH_TOKEN_AGE_SECONDS,
         samesite="lax",

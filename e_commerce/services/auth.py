@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from core.config import settings
 from core.database import get_db
-from core.redis import redis_client
+from core.redis import token_blacklist
 from exceptions.auth import credentials_exception
 from models.tokens import RefreshToken
 from services.users import get_user_by_username
