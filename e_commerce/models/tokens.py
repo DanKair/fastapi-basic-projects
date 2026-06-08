@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from models.users import Base
+from core.database import Base
 
 
 class RefreshToken(Base):

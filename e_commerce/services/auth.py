@@ -1,5 +1,5 @@
 import hashlib, jwt
-from secrets import token_urlsafe, compare_digest
+from secrets import token_urlsafe
 from typing import Annotated
 
 from fastapi import HTTPException, status, Depends
@@ -183,7 +183,7 @@ def add_token_to_blacklist(token: str) -> None:
         if ttl > 0:
             redis_key = f"token:blacklist:{jti}"
             # setex sets the key, expiration time (TTL), and value simultaneously
-            redis_client.setex(name=redis_key, time=ttl, value="1")
+            token_blacklist.setex(name=redis_key, time=ttl, value="1")
 
     except jwt.PyJWTError:
         # If the token is completely mangled or unparseable, ignore it
@@ -208,7 +208,7 @@ def verify_token_not_blacklisted(token: Annotated[str, Depends(oauth2_scheme)]) 
 
         # 2. Redis Blocklist Verification (O(1) lookups)
         redis_key = f"token:blacklist:{jti}"
-        if redis_client.exists(redis_key):
+        if token_blacklist.exists(redis_key):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has been revoked or invalidated"

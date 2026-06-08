@@ -1,11 +1,11 @@
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import DateTime, String, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, declarative_base, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-class Base(DeclarativeBase):
-    pass
+from core.database import Base
+from models.customers import Customer
 
 
 class User(Base):
@@ -16,6 +16,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
 
     is_active: Mapped[bool] = mapped_column(default=True)
+    # Timestamping for auditing
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
@@ -27,4 +28,8 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    # Relationships
+    # uselist=False tells SQLAlchemy this is a strict 1:1, not 1:Many
+    customer: Mapped[Optional["Customer"]] = relationship("Customer", back_populates="user", uselist=False)
     

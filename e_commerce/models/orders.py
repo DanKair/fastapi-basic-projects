@@ -1,11 +1,13 @@
+from decimal import Decimal
 from enum import Enum
 from typing import List
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from models.customers import Customer
 from models.order_items import OrderItem
-from models.users import Base
+from core.database import Base
 
 
 class OrderStatus(str, Enum):
@@ -19,7 +21,11 @@ class Order(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"))
-    total_price: Mapped[float] = mapped_column()
+    # Use asdecimal=True to force strict Decimal handling in SQLite
+    total_price: Mapped[Decimal] = mapped_column(Numeric(10, 2, asdecimal=True))
     order_status: Mapped[OrderStatus] = mapped_column()
 
-    items: Mapped[List["OrderItem"]] = relationship(back_populates="order")
+    # Relationships
+    customer: Mapped["Customer"] = relationship(back_populates="orders")
+    # cascade="all, delete-orphan" means if an Order is deleted, its line items are deleted too
+    items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")

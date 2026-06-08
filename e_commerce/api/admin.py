@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from core.redis import ip_redis
 from services.auth import get_current_user
 from models.users import User
 
 
 router = APIRouter(prefix='/admin', tags=['Admin'])
+
+# Endpoint to check your IP address
+@router.get("/my-ip")
+def get_current_ip_address(request: Request):
+    return {"ip_address": request.client.host}
+
 
 # Endpoint for IP Blocking
 @router.post("/block-ip", tags=["Admin"])
