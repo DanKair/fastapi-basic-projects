@@ -14,9 +14,9 @@ router = APIRouter(prefix='/products', tags=['products'])
 
 @router.post("/create")
 def create_new_product(product_data: ProductCreate, db: Annotated[Session, Depends(get_db)]):
-    if category_exists(product_data.category_id):
+    if category_exists(product_data.category_id, db):
         # 0. Check if following product already exists
-        if not product_exists(product_data.name, product_data.category_id):
+        if not product_exists(product_data.name, product_data.category_id, db):
             # 1. Dynamically unpack the data into the SQLAlchemy model
             new_product = Product(**product_data.model_dump())
 

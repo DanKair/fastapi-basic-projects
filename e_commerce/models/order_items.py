@@ -1,11 +1,16 @@
 from decimal import Decimal
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Float, ForeignKey, Integer, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.orders import Order
-from models.products import Product
 from core.database import Base
+
+# Handles Circular Import Issue
+if TYPE_CHECKING:
+    from models.orders import Order
+    from models.products import Product
 
 
 class OrderItem(Base):

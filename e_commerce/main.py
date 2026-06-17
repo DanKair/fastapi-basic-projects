@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Request, status
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from core.database import engine
 from core.redis import ip_redis
-from api import users, auth, admin
+from api import products, users, auth, admin, categories
 
 # CRITICAL: Import your models HERE so SQLAlchemy registers them
 import models
@@ -38,3 +38,5 @@ def ip_blacklist_middleware(request: Request, call_next):
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(products.router)
+app.include_router(categories.router)

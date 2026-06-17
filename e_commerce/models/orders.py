@@ -1,13 +1,16 @@
 from decimal import Decimal
 from enum import Enum
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.customers import Customer
-from models.order_items import OrderItem
 from core.database import Base
+
+# Handles Circular Import Issue
+if TYPE_CHECKING:
+    from models.customers import Customer
+    from models.order_items import OrderItem
 
 
 class OrderStatus(str, Enum):

@@ -1,16 +1,19 @@
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
-from models.orders import Order
-from models.users import User
+
+# Handles Circular Import Issue
+if TYPE_CHECKING:
+    from models.orders import Order
+    from models.users import User
 
 
 class Customer(Base):
     __tablename__ = "customers"
-    id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
+    id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True, unique=True, nullable=False)
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))
     phone: Mapped[Optional[str]] = mapped_column(String(20))
