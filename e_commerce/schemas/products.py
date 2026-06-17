@@ -1,20 +1,22 @@
+from decimal import Decimal
+from typing import Annotated
+from pydantic import BaseModel, ConfigDict, Field
 
-
-from pydantic import BaseModel
+PriceDecimal = Annotated[Decimal, Field(ge=0, decimal_places=2)]
 
 
 class ProductBase(BaseModel):
     name: str
-    price: float
-    quantity: int
+    price: PriceDecimal
+    stock_quantity: int = Field(ge=0)
 
 
 class ProductCreate(ProductBase):
-    pass
+    category_id: int
 
 
 class ProductResponse(ProductBase):
     product_id: int
 
-    class Config:
-        from_attributes = True 
+    # Modern Pydantic V2 way to enable ORM mode (from_attributes)
+    model_config = ConfigDict(from_attributes=True)

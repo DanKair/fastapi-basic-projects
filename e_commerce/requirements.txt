@@ -1,0 +1,8 @@
+fastapi[all]
+pwdlib[argon2]
+pyjwt
+sqlalchemy
+redis
+pydantic
+pydantic-settings
+python-dotenv
