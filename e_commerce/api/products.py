@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from e_commerce.core.dependencies import get_product_service
 from services.categories import category_exists
-from services.prodcuts import product_exists
+from services.prodcuts import ProductService, product_exists
 from models.products import Product
 from schemas.products import ProductCreate
 
@@ -36,5 +37,15 @@ def create_new_product(product_data: ProductCreate, db: Annotated[Session, Depen
 
 
 @router.get("/")
-def get_all_products(db: Annotated[Session, Depends(get_db)]):
-    pass
+def get_all_products(service: Annotated[ProductService, Depends(get_product_service)]):
+    return service.get_all()
+
+
+@router.get("/category/{category_id}")
+def get_by_category(category_id: int, service: Annotated[ProductService, Depends(get_product_service)]):
+    return service.get_by_category_id(category_id)
+
+
+@router.get("category-name/{category_name}")
+def get_by_category_name(category_name: str, service: Annotated[ProductService, Depends(get_product_service)]):
+    return service.get_by_category_name(category_name)
