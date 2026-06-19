@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from e_commerce.schemas.categories import CategoryCreate, CategoryUpdate
+from schemas.categories import CategoryCreate, CategoryUpdate
 from models.categories import Category
 
 class CategoryService:
@@ -68,7 +68,7 @@ class CategoryService:
 
             if duplicate:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail="Category with this name already exists.",
                 )
 

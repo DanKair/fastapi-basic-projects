@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    DEBUG_ENABLED: bool = False
+    LOGGING_ENABLED: bool = False
     db_url: str = ""
     SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"

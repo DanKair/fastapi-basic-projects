@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from e_commerce.schemas.products import ProductCreate
+from schemas.products import ProductCreate
 from models.categories import Category
 from models.products import Product
 
@@ -68,7 +68,7 @@ class ProductService:
         return False
     
 
-    def create_new_product(self, product_data: ProductCreate):
+    def create(self, product_data: ProductCreate):
         # 0. Validate that chosen category exists
         if self._category_exists(product_data.category_id):
             # 1. Check if following product already exists

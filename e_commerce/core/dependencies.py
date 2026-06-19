@@ -1,7 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from .database import get_db
-from services.prodcuts import ProductService
+from services.products import ProductService
 from services.categories import CategoryService
 
 def get_category_service(db: Session = Depends(get_db)) -> CategoryService:
