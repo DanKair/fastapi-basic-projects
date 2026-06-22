@@ -15,8 +15,16 @@ class ProductCreate(ProductBase):
     category_id: int
 
 
+class ProductUpdate(BaseModel):
+    name: str | None = None
+    category_id: int | None = None
+    price: PriceDecimal | None = None
+    stock_quantity: int | None = Field(default=None, ge=0)
+
+
 class ProductResponse(ProductBase):
-    product_id: int
+    category_id: int
+    id: int
 
     # Modern Pydantic V2 way to enable ORM mode (from_attributes)
     model_config = ConfigDict(from_attributes=True)

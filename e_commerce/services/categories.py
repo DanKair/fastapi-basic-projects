@@ -31,7 +31,8 @@ class CategoryService:
 
     def get_by_id(self, category_id: int) -> Category:
         category = self.category_exists(category_id)
-        return category
+        if category:
+            return self.db.execute(select(Category).where(Category.id == category_id)).scalar_one_or_none()
     
     
     def create(self, category_data: CategoryCreate) -> Category:

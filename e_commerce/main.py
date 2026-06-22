@@ -35,6 +35,9 @@ def ip_blacklist_middleware(request: Request, call_next):
 
     return call_next(request)
 
+@app.get("/")
+def health_check():
+    return {"health_status": "ok"}
 
 app.include_router(users.router)
 app.include_router(auth.router)
