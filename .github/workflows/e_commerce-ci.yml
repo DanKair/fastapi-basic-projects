@@ -4,13 +4,19 @@ name: CI Pipeline
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    # Pipeline works only for changes in the e_commerce directory
+    paths:
+      - "e_commerce/**"
 
 jobs:
   # Only testing for linting and building 
   build-and-test:
     runs-on: ubuntu-latest
+
+    # Changing the working directory to e_commerce for all steps in this job
+    defaults:
+      run:
+        working-directory: ./e_commerce 
     
     steps:
     # 1. Downloading code from the repository to the runner
