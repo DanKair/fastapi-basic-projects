@@ -1,0 +1,32 @@
+name: CI Pipeline
+
+# Building pipeline after every push to the main branch and on pull requests targeting the main branch
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # Only testing for linting and building 
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. Downloading code from the repository to the runner
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. Installing uvx for linting and code quality checks
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    # 3. Checking code for typos and linting issues using Ruff
+    - name: Lint code with Ruff
+      run: uvx ruff check .
+
+    # 4. Checking docker images were built successfully
+    - name: Build Docker Images
+      run: docker compose build
