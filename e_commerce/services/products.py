@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from schemas.products import ProductCreate, ProductUpdate
+from schemas.products import PaginatedProductEnvelope, ProductCreate, ProductUpdate
 from models.categories import Category
 from models.products import Product
 
@@ -28,6 +28,31 @@ class ProductService:
     def get_all(self) -> List[Product]:
         products = self.db.execute(select(Product)).scalars().all()
         return products
+
+    def get_paginated(self, page: int, size: int) -> PaginatedProductEnvelope:
+        if page < 1:
+            raise HTTPException(status_code=400, detail="Page must be at least 1")
+        if size < 1:
+            raise HTTPException(status_code=400, detail="Size must be at least 1")
+
+        total_products = self.db.execute(select(Product)).scalars().count()
+
+        stmt = (
+            select(Product)
+            .offset((page - 1) * size)
+            .limit(size)
+        )
+        products = self.db.execute(stmt).scalars().all()
+
+        total_pages = (total_products + size - 1) // size if total_products else 1
+
+        return PaginatedProductEnvelope(
+            products=products,
+            total_products=total_products,
+            page=page,
+            size=size,
+            total_pages=total_pages,
+        )
 
     def get_by_id(self, product_id: int) -> Product:
         product = self.db.execute(

@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, List
 from pydantic import BaseModel, ConfigDict, Field
 
 PriceDecimal = Annotated[Decimal, Field(ge=0, decimal_places=2)]
@@ -28,3 +28,11 @@ class ProductResponse(ProductBase):
 
     # Modern Pydantic V2 way to enable ORM mode (from_attributes)
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedProductEnvelope(BaseModel):
+    products: List[ProductResponse] 
+    total_products: int
+    page: int
+    size: int # Limit value
+    total_pages: int   

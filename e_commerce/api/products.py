@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, status
+from fastapi import APIRouter, Depends, Form, Query, status
 from core.dependencies import get_product_service
 from services.products import ProductService
-from schemas.products import ProductCreate, ProductResponse, ProductUpdate
+from schemas.products import PaginatedProductEnvelope, ProductCreate, ProductResponse, ProductUpdate
 
 
 router = APIRouter(prefix='/products', tags=['products'])
@@ -16,9 +16,13 @@ def create_new_product(
     return service.create(product_data)
 
 
-@router.get("/", response_model=list[ProductResponse], status_code=status.HTTP_200_OK)
-def get_all_products(service: Annotated[ProductService, Depends(get_product_service)]):
-    return service.get_all()
+@router.get("/", response_model=PaginatedProductEnvelope, status_code=status.HTTP_200_OK)
+def get_all_products(
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=10, ge=1, le=100),
+    service: Annotated[ProductService, Depends(get_product_service)] = Depends(get_product_service),
+):
+    return service.get_paginated(page=page, size=size)
 
 
 @router.get("/{product_id}", response_model=ProductResponse, status_code=status.HTTP_200_OK)

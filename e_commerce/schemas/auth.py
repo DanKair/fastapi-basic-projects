@@ -1,6 +1,4 @@
-from typing import Annotated
 
-from fastapi import Form
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from schemas.users import UserBase
@@ -44,6 +42,21 @@ class TokenResponse(BaseModel):
     """Acess token model"""
     access_token: str
     token_type: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8)
+    password_confirm: str = Field(min_length=8)
+
+    model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def validate_passwords(self):
+        if self.new_password != self.password_confirm:
+            raise ValueError("Passwords do not match")
+        return self
+
 
 class TokenPairsResponse(BaseModel):
     access_token: str

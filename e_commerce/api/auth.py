@@ -6,9 +6,18 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from core.database import get_db
 from models.users import User
-from schemas.auth import TokenPairsResponse, UserRegister
-from services.auth import add_token_to_blacklist, create_access_token, create_refresh_token, get_current_user, is_refresh_token_expired, revoke_refresh_token, get_refresh_token_record, oauth2_scheme
-from services.users import authenticate_user, get_password_hash, get_user_by_username_or_email
+from schemas.auth import ChangePasswordRequest, TokenPairsResponse, UserRegister
+from services.auth import (
+    create_access_token,
+    create_refresh_token,
+    get_current_user,
+    get_refresh_token_record,
+    is_refresh_token_expired,
+    oauth2_scheme,
+    revoke_all_refresh_tokens_for_user,
+    revoke_refresh_token,
+)
+from services.users import authenticate_user, get_password_hash, get_user_by_username_or_email, verify_password
 
 # Centralized cookie configuration helper
 def set_refresh_cookie(response: Response, token: str):
@@ -116,6 +125,32 @@ def user_login(user: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annota
     )
     
     return TokenPairsResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post("/change-password")
+def change_password(
+    password_payload: ChangePasswordRequest,
+    response: Response,
+    access_token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    """Change the password for the currently authenticated user and invalidate other sessions."""
+    current_user = get_current_user(access_token, db)
+
+    if not verify_password(password_payload.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect",
+        )
+
+    current_user.password_hash = get_password_hash(password_payload.new_password)
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+
+    revoke_all_refresh_tokens_for_user(current_user.id, db)
+
+    return {"detail": "Password updated successfully. Other sessions were logged out."}
 
 
 @router.post("/refresh", response_model=TokenPairsResponse)
