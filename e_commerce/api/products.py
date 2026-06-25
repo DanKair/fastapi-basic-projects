@@ -1,14 +1,14 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Query, status
-from core.dependencies import get_product_service
+from core.dependencies import get_product_service, require_editoral
 from services.products import ProductService
 from schemas.products import PaginatedProductEnvelope, ProductCreate, ProductResponse, ProductUpdate
 
 
 router = APIRouter(prefix='/products', tags=['products'])
 
-@router.post("/create", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/create", response_model=ProductResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_editoral)])
 def create_new_product(
     product_data: Annotated[ProductCreate, Form()],
     service: Annotated[ProductService, Depends(get_product_service)]
@@ -18,9 +18,9 @@ def create_new_product(
 
 @router.get("/", response_model=PaginatedProductEnvelope, status_code=status.HTTP_200_OK)
 def get_all_products(
+    service: Annotated[ProductService, Depends(get_product_service)],
     page: int = Query(default=1, ge=1),
     size: int = Query(default=10, ge=1, le=100),
-    service: Annotated[ProductService, Depends(get_product_service)] = Depends(get_product_service),
 ):
     return service.get_paginated(page=page, size=size)
 
@@ -41,7 +41,7 @@ def get_by_category(
     return service.get_by_category_id(category_id)
 
 
-@router.delete("/category/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/category/{category_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_editoral)])
 def delete_products_by_category(
     category_id: int,
     service: Annotated[ProductService, Depends(get_product_service)]
@@ -57,7 +57,7 @@ def get_by_category_name(
     return service.get_by_category_name(category_name)
 
 
-@router.patch("/{product_id}", response_model=ProductResponse, status_code=status.HTTP_200_OK)
+@router.patch("/{product_id}", response_model=ProductResponse, status_code=status.HTTP_200_OK, dependencies=[Depends(require_editoral)])
 def update_product(
     product_id: int,
     product_update: Annotated[ProductUpdate, Form()],
@@ -66,7 +66,7 @@ def update_product(
     return service.update(product_id, product_update)
 
 
-@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_editoral)])
 def delete_product(
     product_id: int,
     service: Annotated[ProductService, Depends(get_product_service)]

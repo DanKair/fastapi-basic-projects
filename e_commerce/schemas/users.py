@@ -1,10 +1,13 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator
+
+from models.users import UserRole
 
 # What the world sees (Safe for anyone to view)
 class UserBase(BaseModel):
     username: str = Field(..., max_length=50, examples=["john_doe", "mary"])
     email: EmailStr
+    role: UserRole = Field(default=UserRole.CUSTOMER, examples=[UserRole.CUSTOMER, UserRole.MANAGER, UserRole.ADMIN])
 
 
 # What the user sees about themselves (Private data)    

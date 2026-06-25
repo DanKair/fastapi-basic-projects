@@ -14,7 +14,6 @@ from services.auth import (
     get_refresh_token_record,
     is_refresh_token_expired,
     oauth2_scheme,
-    revoke_all_refresh_tokens_for_user,
     revoke_refresh_token,
 )
 from services.users import authenticate_user, get_password_hash, get_user_by_username_or_email, verify_password
