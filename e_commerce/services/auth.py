@@ -1,4 +1,5 @@
-import hashlib, jwt
+import hashlib
+import jwt
 from secrets import token_urlsafe
 from typing import Annotated
 
@@ -6,6 +7,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 from core.config import settings
 from core.database import get_db
@@ -139,6 +141,24 @@ def revoke_refresh_token(token: str, db: Session):
     db.delete(record)
     db.commit()
 
+
+def revoke_all_refresh_tokens_for_user(user_id: int, db: Session) -> int:
+    """
+    Revokes every refresh token issued for a user.
+
+    This is useful when a user changes their password or an admin forces
+    a full session reset.
+
+    Args:
+        user_id: Target user identifier.
+        db: Database session.
+
+    Returns:
+        Number of refresh token rows deleted.
+    """
+    deleted_rows = db.execute(delete(RefreshToken).where(RefreshToken.user_id == user_id))
+    db.commit()
+    return deleted_rows.rowcount
 
 
 def create_refresh_token(user_id: int, db: Session):

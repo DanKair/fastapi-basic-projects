@@ -1,6 +1,7 @@
+from enum import Enum
 from typing import List
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, desc, select
 from sqlalchemy.orm import Session
 
 from schemas.products import PaginatedProductEnvelope, ProductCreate, ProductUpdate
@@ -82,6 +83,17 @@ class ProductService:
             .where(Category.name.ilike(f"{category_name}%"))
         )
         return self.db.execute(stmt).scalars().all()
+    
+    def order_by_price(self, order_type: SortOrder):
+        """Orders products by their prices in DESCENDING ORDER"""
+        if order_type == "desc":
+            stmt = (
+                select(Product)
+                .order_by(desc(Product.price))
+            )
+            return self.db.execute(stmt).scalars().all()
+        
+        return self.db.execute(select(Product).order_by(Product.price)).scalars().all()
 
     def product_exists(self, product_name, product_category_id):
         """
@@ -166,5 +178,10 @@ class ProductService:
         stmt = delete(Product).where(Product.category_id == category_id)
         self.db.execute(stmt)
         self.db.commit()
+
+
+class SortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"        
 
 

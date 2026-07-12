@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Query, status
 from core.dependencies import get_product_service, require_editoral
-from services.products import ProductService
+from services.products import ProductService, SortOrder
 from schemas.products import PaginatedProductEnvelope, ProductCreate, ProductResponse, ProductUpdate
 
 
@@ -23,6 +23,13 @@ def get_all_products(
     size: int = Query(default=10, ge=1, le=100),
 ):
     return service.get_paginated(page=page, size=size)
+
+@router.get("/{order_type}/price")
+def get_products_by_price(
+    service: Annotated[ProductService, Depends(get_product_service)],
+    order_type: SortOrder
+):
+    return service.order_by_price(order_type)
 
 
 @router.get("/{product_id}", response_model=ProductResponse, status_code=status.HTTP_200_OK)

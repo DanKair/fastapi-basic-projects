@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Cookie, Depends, Response, HTTPException, status
+from fastapi import APIRouter, Cookie, Depends, Form, Response, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
 from sqlalchemy.orm import Session
@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from core.database import get_db
 from models.users import User
-from schemas.auth import ChangePasswordRequest, TokenPairsResponse, UserRegister
+from schemas.auth import ChangePasswordRequest, TokenPairsResponse
+from schemas.users import UserCreate
 from services.auth import (
     create_access_token,
     create_refresh_token,
@@ -15,8 +16,9 @@ from services.auth import (
     is_refresh_token_expired,
     oauth2_scheme,
     revoke_refresh_token,
+    revoke_all_refresh_tokens_for_user,
 )
-from services.users import authenticate_user, get_password_hash, get_user_by_username_or_email, verify_password
+from services.users import authenticate_user, create_user as create_user_record, verify_password
 
 # Centralized cookie configuration helper
 def set_refresh_cookie(response: Response, token: str):
@@ -33,7 +35,7 @@ def set_refresh_cookie(response: Response, token: str):
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("", response_model=TokenPairsResponse, status_code=status.HTTP_201_CREATED)
-def create_user(user: UserRegister, db: Annotated[Session, Depends(get_db)],  response: Response):
+def create_user_endpoint(user: Annotated[UserCreate, Form()], db: Annotated[Session, Depends(get_db)],  response: Response):
     """
     Corrected Register Flow:
     1. Check if user already exists.
@@ -44,32 +46,15 @@ def create_user(user: UserRegister, db: Annotated[Session, Depends(get_db)],  re
     6. Return the tokens.
     """
 
-    # 1.    Check if user exists
-    existing_user = get_user_by_username_or_email(db, user.username, user.email)
-    if existing_user:
-        if existing_user.username == user.username:
-            detail = "Username already exists"
-        elif existing_user.email == user.email:
-            detail = "Email already registered"
-        else:
-            detail = "User with given credentials already exists"
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=detail,
-        )
-    
-     # 2. Hash password and save the User first
-    password = get_password_hash(user.password)
-    new_user = User(username=user.username, email=user.email, password_hash=password)
-    db.add(new_user)
-    
-    # We commit here so the database generates the new_user.id
-    db.commit()
-    db.refresh(new_user) # Now new_user.id is fully accessible in Python
+    new_user = create_user_record(
+        db,
+        username=user.username,
+        email=user.email,
+        password=user.password,
+    )
     
     # 3. Create and save Refresh token using the newly generated user_id
-    refresh_token = create_refresh_token(new_user.id, db) 
+    refresh_token = create_refresh_token(new_user.id, db)
 
     # Save refresh token in cookies
     set_refresh_cookie(response, refresh_token)
@@ -79,7 +64,7 @@ def create_user(user: UserRegister, db: Annotated[Session, Depends(get_db)],  re
     record = get_refresh_token_record(refresh_token, db)
 
     # 5. Create stateless access token containing the unique token/session identifier
-    access_token = create_access_token({"sub": user.username, "jti": str(record.jti)})
+    access_token = create_access_token({"sub": new_user.username, "jti": str(record.jti)})
 
     # 6. Return generated token pairs
     token_pairs = TokenPairsResponse(access_token=access_token, refresh_token=refresh_token)
