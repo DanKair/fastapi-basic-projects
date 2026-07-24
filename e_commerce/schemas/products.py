@@ -25,6 +25,7 @@ class ProductUpdate(BaseModel):
 class ProductResponse(ProductBase):
     category_id: int
     id: int
+    image_path: str | None = None
 
     # Modern Pydantic V2 way to enable ORM mode (from_attributes)
     model_config = ConfigDict(from_attributes=True)

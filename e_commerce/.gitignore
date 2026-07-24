@@ -115,3 +115,5 @@ ENV/
 env.bak/
 venv.bak/
 
+# Directories
+uploads/**/

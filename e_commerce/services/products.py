@@ -167,6 +167,13 @@ class ProductService:
         self.db.refresh(product)
         return product
 
+    def update_image_path(self, product_id: int, image_path: str) -> Product:
+        product = self.get_by_id(product_id)
+        product.image_path = image_path
+        self.db.commit()
+        self.db.refresh(product)
+        return product
+
     def delete(self, product_id: int) -> None:
         product = self.get_by_id(product_id)
         self.db.delete(product)
@@ -183,5 +190,4 @@ class ProductService:
 class SortOrder(str, Enum):
     asc = "asc"
     desc = "desc"        
-
 

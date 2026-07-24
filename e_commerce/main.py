@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, status
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from core.database import Base, engine
 from core.redis import ip_redis
@@ -20,6 +22,9 @@ async def lifespan(app: FastAPI):
     # This runs when the app shuts down (clean up if needed)
 
 app = FastAPI(name="User AUTH", lifespan=lifespan, debug=settings.DEBUG_ENABLED)
+UPLOAD_DIRECTORY = Path(__file__).resolve().parent / "uploads"
+UPLOAD_DIRECTORY.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIRECTORY), name="uploads")
 
 @app.middleware("http")
 def ip_blacklist_middleware(request: Request, call_next):
